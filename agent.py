@@ -1,6 +1,11 @@
 import numpy as np
 from pettingzoo.classic import texas_holdem_v4
 import copy
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logging.info('This is a debug message')
+
 
 class CounterfactualRegretAgent:
     def __init__(self, num_actions):
@@ -96,6 +101,24 @@ def train_agent(num_iterations):
     return agents
 
 
+## logging observation space to be human-readable
+obs_dict = {0:'A', 1:'2', 2:'3', 3:'4', 4:'5', 6:'7', 7:'8', 8:'9', 9:'10', 10:'J', 11:'Q', 12:'K'}
+def translate_obs(obs_space):
+    log = ''
+    obs = np.where(obs_space == 1)[0]
+    for o in obs:
+        if o < 52:
+            if o <= 12:
+                log += 'Spades'
+            elif o <= 25:
+                log += 'Hearts'
+            elif o <= 38:
+                log += 'Diamonds'
+            elif o <= 51:
+                log += 'Clubs'
+            log += ' ' + obs_dict[o % 13] + '\n'
+    logging.info(log)
+
 num_iterations = 1000
 trained_agents = train_agent(num_iterations)
 
@@ -103,7 +126,15 @@ env = texas_holdem_v4.env(render_mode="human")
 env.reset(seed=42)
 
 for agent in env.agent_iter():
+    logging.info('NEW STATE')
     observation, reward, termination, truncation, info = env.last()
+    
+
+    obs_space = observation['observation']
+    translate_obs(obs_space)
+
+    act_space = observation['action_mask']
+
     if termination or truncation:
         action = None
     else:
