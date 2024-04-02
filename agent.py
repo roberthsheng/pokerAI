@@ -1,6 +1,8 @@
 import numpy as np
 from pettingzoo.classic import texas_holdem_v4
 import copy
+from nn import NeuralNetworkAgent
+import time
 
 class CounterfactualRegretAgent:
     def __init__(self, num_actions):
@@ -47,7 +49,7 @@ class CounterfactualRegretAgent:
 
 def train_agent(num_iterations):
     env = texas_holdem_v4.env()
-    agents = {agent: CounterfactualRegretAgent(env.action_space(agent).n) for agent in env.possible_agents}
+    agents = {agent: NeuralNetworkAgent(env.action_space(agent).n) for agent in env.possible_agents}
 
     for _ in range(num_iterations):
         env.reset()
@@ -61,7 +63,7 @@ def train_agent(num_iterations):
                 terminal = True
                 action = None
             else:
-                action = agents[current_player].choose_action(mask)
+                action = agents[current_player].choose_action(observation, mask)
                 env.step(action)
 
             if not terminal:
@@ -86,17 +88,15 @@ def train_agent(num_iterations):
                             counterfactual_values[a] = next_reward
 
                             if not (next_termination or next_truncation):
-                                next_action = agents[next_player].choose_action(next_mask)
+                                next_action = agents[next_player].choose_action(next_observation, next_mask)
                                 counterfactual_env.step(next_action)
 
-                    regret = counterfactual_values - counterfactual_values[action]
-                    agents[current_player].update_regret(action, regret)  # Pass the regret array
-                    agents[current_player].update_strategy()
+                    target = np.max(counterfactual_values)
+                    agents[current_player].train(current_observation, action, target)
 
     return agents
 
-
-num_iterations = 1000
+num_iterations = 100
 trained_agents = train_agent(num_iterations)
 
 env = texas_holdem_v4.env(render_mode="human")
@@ -108,7 +108,8 @@ for agent in env.agent_iter():
         action = None
     else:
         mask = observation["action_mask"]
-        action = trained_agents[agent].choose_action(mask)
+        action = trained_agents[agent].choose_action(observation, mask)
     env.step(action)
+    time.sleep(5)
 
 env.close()

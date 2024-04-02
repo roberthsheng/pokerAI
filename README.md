@@ -2,5 +2,5 @@
 
 To get started, run:
 ```
-pip install pettingzoo[classic] pygame rlcard
+pip install pettingzoo pygame rlcard labml tensorflow
 ```
