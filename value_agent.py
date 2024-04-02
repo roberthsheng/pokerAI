@@ -2,9 +2,9 @@ import numpy as np
 from typing import Callable, Dict, List, NewType, cast
 from pettingzoo.classic import texas_holdem_v4
 import copy
-import treys
+import treys # pip install
 
-import agent_refactor
+from agent_refactor import History, InfoSet
 
 '''
 TODO: implement new info_set methods:
