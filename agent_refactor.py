@@ -1,18 +1,19 @@
 from labml import experiment, monit, tracker
 from typing import Callable, Dict, List, NewType, cast
 import numpy as np
-from pettingzoo.classic import texas_holdem_no_limit_v6
+import rlcard.games.nolimitholdem as rlcard_no_limit
 
 NUM_PLAYERS = 4    
 
-Player = NewType("Player", int)
+Player = NewType("Player", rlcard_no_limit.NoLimitholdemPlayer)
 Action = NewType("Action", int)
 
 class History:
     
     def is_terminal(self) -> bool:
         """Outputs whether the history is a finished game state."""
-        raise NotImplementedError
+        
+        # raise NotImplementedError
     
     def terminal_utility(self, i: Player) -> float:
         """Ouputs utility of specified player for a terminal history."""
@@ -60,7 +61,8 @@ class InfoSet:
 
     def actions(self) -> List[Action]:
         """Outputs the list of possible actions."""
-        raise NotImplementedError
+        return rlcard_no_limit.get_legal_actions()
+        # raise NotImplementedError
     
     @staticmethod
     def from_dict(data: Dict[str, any]) -> 'InfoSet':
