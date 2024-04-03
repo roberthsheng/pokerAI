@@ -11,8 +11,16 @@ class HumanAgent(object):
         self.use_raw = True
         self.num_actions = num_actions
 
-    @staticmethod
-    def step(state):
+    def get_state(self, observation):
+        state = {
+            'raw_obs': observation,
+            'legal_actions': list(observation['action_mask']),
+            'raw_legal_actions': [i for i, is_legal in enumerate(observation['action_mask']) if is_legal]
+        }
+        return state
+ 
+    def step(self, observation):
+        state = self.get_state(observation)
         ''' Human agent will display the state and make decisions through interfaces
 
         Args:
