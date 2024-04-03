@@ -49,7 +49,8 @@ class CounterfactualRegretAgent:
 
 def train_agent(num_iterations):
     env = texas_holdem_v4.env()
-    agents = {agent: NeuralNetworkAgent(env.action_space(agent).n) for agent in env.possible_agents}
+    cfr_agents = {agent: CounterfactualRegretAgent(env.action_space(agent).n) for agent in env.possible_agents}
+    nn_agents = {agent: NeuralNetworkAgent(env.action_space(agent).n) for agent in env.possible_agents}
 
     for _ in range(num_iterations):
         env.reset()
@@ -63,8 +64,9 @@ def train_agent(num_iterations):
                 terminal = True
                 action = None
             else:
-                action = agents[current_player].choose_action(observation, mask)
-                env.step(action)
+                action_cfr = cfr_agents[current_player].choose_action(mask)
+                action_nn = nn_agents[current_player].choose_action(observation, mask)
+                env.step(action_cfr)  # Use the action chosen by the CFR agent
 
             if not terminal:
                 next_player = env.agent_selection
@@ -88,28 +90,54 @@ def train_agent(num_iterations):
                             counterfactual_values[a] = next_reward
 
                             if not (next_termination or next_truncation):
-                                next_action = agents[next_player].choose_action(next_observation, next_mask)
-                                counterfactual_env.step(next_action)
+                                next_action_cfr = cfr_agents[next_player].choose_action(next_mask)
+                                next_action_nn = nn_agents[next_player].choose_action(next_observation, next_mask)
+                                counterfactual_env.step(next_action_cfr)
 
                     target = np.max(counterfactual_values)
-                    agents[current_player].train(current_observation, action, target)
+                    nn_agents[current_player].train(current_observation, action_nn, target)
 
-    return agents
+    return cfr_agents, nn_agents
+
+def evaluate_agent(cfr_agents, nn_agents, num_games=10):
+    total_rewards_cfr = {agent: 0 for agent in cfr_agents.keys()}  # Initialize total rewards for CFR agents
+    total_rewards_nn = {agent: 0 for agent in nn_agents.keys()}  # Initialize total rewards for NN agents
+
+    for _ in range(num_games):
+        env = texas_holdem_v4.env(render_mode=None)  # Turn off rendering for faster evaluation
+        env.reset(seed=np.random.randint(10000))
+
+        while True:
+            agent = env.agent_selection
+            observation, reward, termination, truncation, info = env.last()
+
+            total_rewards_cfr[agent] += reward
+            total_rewards_nn[agent] += reward
+
+            if termination or truncation:
+                action = None
+            else:
+                mask = observation["action_mask"]
+                action = cfr_agents[agent].choose_action(mask)  # use the CFR agent's action for evaluation
+            env.step(action)
+
+            if all(env.terminations.values()):
+                break  # exit loop if all are done
+
+        env.close()
+
+    # avg rewards
+    average_rewards_cfr = {agent: total / num_games for agent, total in total_rewards_cfr.items()}
+    average_rewards_nn = {agent: total / num_games for agent, total in total_rewards_nn.items()}
+
+    return average_rewards_cfr, average_rewards_nn
 
 num_iterations = 100
-trained_agents = train_agent(num_iterations)
+cfr_agents, nn_agents = train_agent(num_iterations)
 
-env = texas_holdem_v4.env(render_mode="human")
-env.reset(seed=42)
+# eval
+num_games = 50
+average_rewards_cfr, average_rewards_nn = evaluate_agent(cfr_agents, nn_agents, num_games)
 
-for agent in env.agent_iter():
-    observation, reward, termination, truncation, info = env.last()
-    if termination or truncation:
-        action = None
-    else:
-        mask = observation["action_mask"]
-        action = trained_agents[agent].choose_action(observation, mask)
-    env.step(action)
-    time.sleep(5)
-
-env.close()
+print(f"Average rewards for CFR agents over {num_games} games:", average_rewards_cfr)
+print(f"Average rewards for NN agents over {num_games} games:", average_rewards_nn)
