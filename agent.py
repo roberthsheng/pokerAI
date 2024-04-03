@@ -1,8 +1,11 @@
 import numpy as np
-from pettingzoo.classic import texas_holdem_v4
 import copy
-from nn import NeuralNetworkAgent
-import time
+import logging
+from pettingzoo.classic import texas_holdem_v4
+from nn import NeuralNetworkAgent  # Assuming this is your custom module
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 class CounterfactualRegretAgent:
     def __init__(self, num_actions):
@@ -66,7 +69,7 @@ def train_agent(num_iterations):
             else:
                 action_cfr = cfr_agents[current_player].choose_action(mask)
                 action_nn = nn_agents[current_player].choose_action(observation, mask)
-                env.step(action_cfr)  # Use the action chosen by the CFR agent
+                env.step(action_cfr)
 
             if not terminal:
                 next_player = env.agent_selection
@@ -96,6 +99,7 @@ def train_agent(num_iterations):
 
                     target = np.max(counterfactual_values)
                     nn_agents[current_player].train(current_observation, action_nn, target)
+
 
     return cfr_agents, nn_agents
 
