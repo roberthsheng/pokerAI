@@ -37,11 +37,9 @@ class CFRAgent():
         # The regrets are recorded in traversal
         for player_id in range(self.env.num_players):
             self.env.reset()
-           # for i in range(7):
-           #     self.env.step(1)
-            self.go_to_random_state(player_id)
+            self.go_to_random_state(player_id) # generate a trajectory, then roll back to a random state
             probs = np.ones(self.env.num_players)
-            self.traverse_tree(probs, player_id)
+            self.traverse_tree(probs, player_id) # find the regret for the action we did at that state-- execute all possible actions, then follow policy exactly and get rewards
 
         # Update policy
         self.update_policy()
@@ -52,28 +50,20 @@ class CFRAgent():
             # may need fix, if there's an empty trajectory-- e.g your opponent played first and folded immediately, then just do CFR on the first step 
                 self.env.reset()
                 return
-            #print(f"Lasted for {trajectory_len}")
+
             if self.env.get_player_id() != player_id: # I made the last move
-            #    print('here')
                 numbers = np.arange(1, trajectory_len+1)
                 odd_numbers = numbers[numbers % 2 == 1]
-            #    print(odd_numbers)
                 random_number = np.random.choice(odd_numbers)
                 
             else: # need even number of step backs
                 numbers = np.arange(1, trajectory_len+1)
                 even_numbers = numbers[numbers % 2 == 0]
-            #    print(even_numbers)
                 random_number = np.random.choice(even_numbers)
-            #    print('this one')
-            #print(random_number)
-            #print(player_id)
-            #print(self.env.get_player_id())
        
-            for i in range(random_number):
+            for i in range(random_number): # step back to the random state we chose
                 self.env.step_back()
             
-            #print(self.env.get_player_id())
     def generate_trajectory(self):
         '''
             Bring the environment to a terminal state by playing according to policy
@@ -85,8 +75,7 @@ class CFRAgent():
             player_id = self.env.get_player_id()
             state_for_act = self.env.get_state(player_id)
             action, info = self.eval_step(state_for_act)
-            print(f"Player {player_id} played {action}")
-            # print(action, legal_actions)
+            # print(f"Player {player_id} played {action}")
     
             # Keep traversing the child state
             self.env.step(action)
@@ -114,15 +103,15 @@ class CFRAgent():
         obs, legal_actions = self.get_state(current_player)
         action_probs = self.action_probs(obs, legal_actions, self.policy)
 
-        for action in legal_actions:
+        for action in legal_actions: # try all possible actions "counterfactually"
             action_prob = action_probs[action]
             new_probs = probs.copy()
             new_probs[current_player] *= action_prob
 
             # Keep traversing the child state
             self.env.step(action)
-            print(action)
-            utility = self.traverse_lazy(player_id) # want to replace this with a func that doesn't check all possible actions here-- some version of traverse that's lazy
+            # print(action)
+            utility = self.traverse_lazy(player_id) # this just computes utility if we follow policy exactly from here on out 
             self.env.step_back()
 
             state_utility += action_prob * utility
@@ -159,8 +148,6 @@ class CFRAgent():
             state_utilities (nparray): zeros for all other players, payoffs for player_id 
         '''
         if self.env.is_over():
-            print(self.env.get_state(player_id)) 
-            print("\n\n\n\n\n\n\n\n")
             return self.env.get_payoffs()
 
         current_player = self.env.get_player_id()
@@ -171,11 +158,10 @@ class CFRAgent():
 
         state_for_act = self.env.get_state(player_id)
         action, info = self.eval_step(state_for_act)
-        # print(action, legal_actions)
 
         # Keep traversing the child state
         self.env.step(action)
-        utility = self.traverse_lazy(player_id) # want to replace this with a func that doesn't check all possible actions here-- some version of traverse that's lazy
+        utility = self.traverse_lazy(player_id) 
         self.env.step_back()
 
         state_utility +=  utility
@@ -184,22 +170,6 @@ class CFRAgent():
         if not current_player == player_id:
             return state_utility
 
-        # If it is current player, we record the policy and compute regret
-#        player_prob = probs[current_player]
-#        counterfactual_prob = (np.prod(probs[:current_player]) *
-#                                np.prod(probs[current_player + 1:]))
-#        player_state_utility = state_utility[current_player]
-#
-#        if obs not in self.regrets:
-#            self.regrets[obs] = np.zeros(self.env.num_actions)
-#        if obs not in self.average_policy:
-#            self.average_policy[obs] = np.zeros(self.env.num_actions)
-#        for action in legal_actions:
-#            action_prob = action_probs[action]
-#            regret = counterfactual_prob * (action_utilities[action][current_player]
-#                    - player_state_utility)
-#            self.regrets[obs][action] += regret
-#            self.average_policy[obs][action] += self.iteration * player_prob * action_prob
         return state_utility
 
 
@@ -297,13 +267,13 @@ class CFRAgent():
         raw_state = state
         raw_obs = state['raw_obs']
         equity = calculate_equity(raw_obs['hand'], raw_obs['public_cards'])
-        new_obs = {
+        new_obs = { # don't need to make it into a dict before putting it in an array but wanted to be clear
             'pot': raw_obs['pot'],
             'my_chips': raw_obs['my_chips'],
             'equity': equity - (equity % 5),
             'stage': raw_obs['stage'],
         }    
-        list_obs = np.array(list(new_obs))
+        list_obs = np.array(list(new_obs.values()))
         raw_state['obs'] = list_obs
         return raw_state
 
