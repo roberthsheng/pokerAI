@@ -17,10 +17,13 @@ def main():
     # Initialize the game environment
     # env = texas_holdem_no_limit_v6.raw_env(render_mode="human", num_players=2, allow_step_back=True)
     cfr = CFRAgent(env)
-    for i in range(10):
-        print(i)
+    for i in range(1000):
         cfr.train()
+        if i % 50 == 0:
+            print(i)
     print(cfr.regrets)
+    cfr.save()
+ 
 
 main()
 
