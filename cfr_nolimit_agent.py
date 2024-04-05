@@ -1,10 +1,14 @@
+from pettingzoo.classic import texas_holdem_no_limit_v6
+import time
+from human_agent import HumanAgent
 import numpy as np
 import collections
-
+from datetime import datetime
 import os
 import pickle
 from equity_calculator import calculate_equity
 from rlcard.utils.utils import *
+from timing_utils import time_function
 
 class CFRAgent():
     ''' Implement CFR (chance sampling) algorithm
@@ -16,10 +20,13 @@ class CFRAgent():
         Args:
             env (Env): Env class
         '''
-        self.use_raw = False
+        self.use_raw = False # this agent uses the raw rlcard env. This means raw_env.env (if using pettingzoo)
+        # or rlcard.make("no-limit-holdem", config), need "allow_step_back": True 
         self.env = env
-        self.model_path = model_path
-
+        # self.env.step = time_function(self.env.step)
+        # self.env.step_back = time_function(self.env.step_back)
+        datetime_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.model_path = f"cfr_models/{model_path}_{datetime_str}"
         # A policy is a dict state_str -> action probabilities
         self.policy = collections.defaultdict(list)
         self.average_policy = collections.defaultdict(np.array)
@@ -73,9 +80,10 @@ class CFRAgent():
             if (self.env.is_over()):
                 break
             player_id = self.env.get_player_id()
+
             state_for_act = self.env.get_state(player_id)
+            state_for_act = self.reduce_state(state_for_act)
             action, info = self.eval_step(state_for_act)
-            # print(f"Player {player_id} played {action}")
     
             # Keep traversing the child state
             self.env.step(action)
@@ -105,12 +113,9 @@ class CFRAgent():
 
         for action in legal_actions: # try all possible actions "counterfactually"
             action_prob = action_probs[action]
-            new_probs = probs.copy()
-            new_probs[current_player] *= action_prob
 
             # Keep traversing the child state
             self.env.step(action)
-            # print(action)
             utility = self.traverse_lazy(player_id) # this just computes utility if we follow policy exactly from here on out 
             self.env.step_back()
 
@@ -121,23 +126,23 @@ class CFRAgent():
             return state_utility
 
         # If it is current player, we record the policy and compute regret
-        player_prob = probs[current_player]
-        counterfactual_prob = (np.prod(probs[:current_player]) *
-                                np.prod(probs[current_player + 1:]))
         player_state_utility = state_utility[current_player]
-
         if obs not in self.regrets:
             self.regrets[obs] = np.zeros(self.env.num_actions)
         if obs not in self.average_policy:
             self.average_policy[obs] = np.zeros(self.env.num_actions)
         for action in legal_actions:
             action_prob = action_probs[action]
-            regret = counterfactual_prob * (action_utilities[action][current_player]
+            regret = (action_utilities[action][current_player]
                     - player_state_utility)
             self.regrets[obs][action] += regret
-            self.average_policy[obs][action] += self.iteration * player_prob * action_prob
-        return state_utility
-
+            self.average_policy[obs][action] += self.iteration * action_prob
+            
+#        print(obs)
+#        print(self.regrets[obs])
+#        print(self.average_policy[obs])
+#        print("\n\n\n\n\n")
+#
     def traverse_lazy(self, player_id):
         ''' Traverse the game tree, get the outcome from following policy exactly at every step 
 
@@ -148,30 +153,25 @@ class CFRAgent():
             state_utilities (nparray): zeros for all other players, payoffs for player_id 
         '''
         if self.env.is_over():
+            # print(f"got this payoff {self.env.get_payoffs()}")
             return self.env.get_payoffs()
+        num_steps = 0
+        while True:
+            if self.env.is_over():
+                utility = self.env.get_payoffs()
+                break
+            
+            current_player = self.env.get_player_id()
+            state_for_act = self.env.get_state(player_id)
+            state_for_act = self.reduce_state(state_for_act)
+            action, info = self.eval_step(state_for_act)
+            num_steps += 1
+            self.env.step(action)
 
-        current_player = self.env.get_player_id()
+        for i in range(num_steps):
+            self.env.step_back()
 
-        action_utilities = {} # want to compute how much better this current action may be
-        state_utility = np.zeros(self.env.num_players)
-        obs, legal_actions = self.get_state(current_player)
-
-        state_for_act = self.env.get_state(player_id)
-        action, info = self.eval_step(state_for_act)
-
-        # Keep traversing the child state
-        self.env.step(action)
-        utility = self.traverse_lazy(player_id) 
-        self.env.step_back()
-
-        state_utility +=  utility
-        action_utilities[action] = utility
-
-        if not current_player == player_id:
-            return state_utility
-
-        return state_utility
-
+        return utility
 
 
     def update_policy(self):
@@ -230,7 +230,8 @@ class CFRAgent():
             action (int): Predicted action
             info (dict): A dictionary containing information
         '''
-        probs = self.action_probs(state['obs'].tostring(), list(state['legal_actions'].keys()), self.average_policy)
+        probs = self.action_probs(state['obs'], list(state['legal_actions'].keys()), self.average_policy)
+        # print(probs)
         action = np.random.choice(len(probs), p=probs)
 
         info = {}
@@ -238,6 +239,22 @@ class CFRAgent():
 
         return action, info
 
+    def step(self, observation):# obs unneeded but to match, gets state from env
+        player_id = self.env.get_player_id()
+        state_for_act = self.env.get_state(player_id)
+        state_for_act = self.reduce_state(state_for_act)
+        action, info = self.eval_step(state_for_act)
+        
+        state_str, _ = self.get_state(player_id)
+        if state_str in self.regrets:
+            print('encountered')
+            print(self.regrets[state_str])
+        else:
+            print('havent encountered')
+        print(f"cfr_agent chose: {action}")
+        return action
+ 
+        
     def get_state(self, player_id):
         ''' Get state_str of the player
 
@@ -251,7 +268,7 @@ class CFRAgent():
         '''
         state = self.env.get_state(player_id)
         state = self.reduce_state(state)
-        return state['obs'].tostring(), list(state['legal_actions'].keys())
+        return state['obs'], list(state['legal_actions'].keys())
 
     def reduce_state(self, state):
         '''Put the state returned by env in one of a few predefined groups
@@ -260,21 +277,22 @@ class CFRAgent():
             state (dict): The state returned by env.get_state(player_id)
         
         Returns:
-            reduced_state (dict): A dictionary containing fewer, lower-dim observations
+            reduced_state (dict): An identical dictionary containing fewer, lower-dim observations under 'obs'
         '''
         # maybe learn state groupings
         # this may not be an efficient way to encode state-- doing it the way rlcard did
         raw_state = state
         raw_obs = state['raw_obs']
         equity = calculate_equity(raw_obs['hand'], raw_obs['public_cards'])
-        new_obs = { # don't need to make it into a dict before putting it in an array but wanted to be clear
-            'pot': raw_obs['pot'],
-            'my_chips': raw_obs['my_chips'],
-            'equity': equity - (equity % 5),
+        new_obs = { 
+            'pot': raw_obs['pot'] - raw_obs['pot'] % 10,
+            'my_chips': raw_obs['my_chips'] - raw_obs['my_chips'] % 10,
+            'equity': round(equity * 20)/20,
             'stage': raw_obs['stage'],
         }    
-        list_obs = np.array(list(new_obs.values()))
-        raw_state['obs'] = list_obs
+
+        tuple_obs = tuple(new_obs.values())
+        raw_state['obs'] = tuple_obs
         return raw_state
 
     def save(self):
@@ -299,9 +317,12 @@ class CFRAgent():
         pickle.dump(self.iteration, iteration_file)
         iteration_file.close()
 
-    def load(self):
+    def load(self, optional_path=None):
         ''' Load model
         '''
+        if optional_path:
+            self.model_path = optional_path
+
         if not os.path.exists(self.model_path):
             return
 
@@ -320,3 +341,40 @@ class CFRAgent():
         iteration_file = open(os.path.join(self.model_path, 'iteration.pkl'),'rb')
         self.iteration = pickle.load(iteration_file)
         iteration_file.close()
+
+
+# if running main, play a game with human vs equity agent
+def main():
+    # Initialize the game environment
+    env = texas_holdem_no_limit_v6.env(render_mode="human", num_players=2)
+
+    while True:
+        env.reset()
+        
+        # Initialize agents
+        cfr = CFRAgent(env.unwrapped.env) 
+        cfr.load('./cfr_models/cfr_model_20240404_171341')
+        print(len(cfr.regrets))
+        agents = [HumanAgent(env.action_space(env.agents[0]).n), CFRAgent(env.unwrapped.env)]
+        agent_dict = dict(zip(env.agents, agents))
+    
+        # Main game loop
+        for agent in env.agent_iter():
+            observation, reward, done, truncation, info = env.last()
+            if done:
+                env.step(None)
+            else:
+                # Fetch the corresponding agent (human or AI)
+                current_agent = agent_dict[agent]
+                
+                # Perform an action
+                action = current_agent.step(observation)
+                env.step(action)
+    
+            if done or truncation: 
+                print("Game Over")
+                break
+    
+if __name__ == "__main__":
+    main()
+
