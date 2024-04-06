@@ -18,8 +18,9 @@ TODO: implement new info_set methods:
 #################
 class ValueAgent:
     '''Agent that randomly selects form +EV actions'''
-    def __init__(self, env):
+    def __init__(self, env, agent_idx=1):
         self.env = env
+        self.agent_idx
 
     def get_state(self, observation):
         # need to get hand/community card data which seems inaccessible via vanilla observations
@@ -30,12 +31,14 @@ class ValueAgent:
         pot = raw_data['pot']
         current_bet = max(raw_data['all_chips'])
         amount_to_play = current_bet - raw_data['my_chips']
+        stack = raw_data['raw_obs']['stakes']
         state = {
             'raw_obs': observation,
             'hole_cards': hole_cards,
             'community_cards': community_cards, 
             'pot': pot,
-            'amount_to_play': amount_to_play
+            'amount_to_play': amount_to_play,
+            'stack': stack
         }
         return state 
 
@@ -91,13 +94,8 @@ class ValueAgent:
         # all in
         if mask[4] == 1:
             hand_equity = calculate_equity(state['hole_cards'], state['community_cards'])
-            pot_odds = 0
-            if state['amount_to_play'] == 0 or state['amount_to_play'] >= state['stack']:
-                pot_odds = (state['stack']) / (state['pot'] + state['stack'])
-            else:
-                pay = state['stack'] # price to call + current pot
-                win = state['pot'] + pay
-                pot_odds = pay / state['stack']
+            pot_odds = (state['stack']) / (state['pot'] + state['stack'])
+
             if hand_equity <= pot_odds:
                 valid_actions.pop(0)
         
