@@ -15,7 +15,7 @@ class Tester:
         self.agents[1] = agent2
         self.names[1] = name2
 
-    def plot_stack(self, num_games, stacks):
+    def plot_stack(self, stacks, num_games=1000):
         for stack in stacks:
             cfr_stack = stack['cfr']
             games = range(cfr_stack)
@@ -25,7 +25,7 @@ class Tester:
         return plt
 
     
-    def play(self, num_games, init_stack):
+    def play(self, init_stack=100, num_games=1000):
         stacks = []
         for _ in range(num_games):
             env = texas_holdem_v4.env(render_mode=None)  # Turn off rendering for faster evaluation
@@ -57,5 +57,5 @@ class Tester:
 ## tester
 cfr1, cfr2 = CounterfactualRegretAgent(), CounterfactualRegretAgent()
 t = Tester(cfr1, cfr2)
-stacks = t.play(1000, 100)
+stacks = t.play()
 t.plot_stack(stacks)
