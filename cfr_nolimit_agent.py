@@ -248,13 +248,13 @@ class CFRAgent():
         state_str, _ = self.get_state(player_id)
         # print(state_str)
         # print(self.regrets)
-        if state_str in self.regrets:
-            print('encountered')
-            print(self.regrets[state_str])
-        else:
-            print(state_str)
-            print('havent encountered')
-        print(f"cfr_agent chose: {action}")
+#        if state_str in self.regrets:
+#            print('encountered')
+#            print(self.regrets[state_str])
+#        else:
+#            print(state_str)
+#            print('havent encountered')
+#        print(f"cfr_agent chose: {action}")
         return action
  
         
@@ -356,7 +356,7 @@ def main():
         
         # Initialize agents
         cfr = CFRAgent(env.unwrapped.env) 
-        cfr.load('./cfr_models/cfr_model_20240405_204923')
+        cfr.load('./cfr_models/cfr_model_20240405_214610')
 
         first_three_values = {}
 #        for key in cfr.regrets.keys():
