@@ -246,10 +246,13 @@ class CFRAgent():
         action, info = self.eval_step(state_for_act)
         
         state_str, _ = self.get_state(player_id)
+        # print(state_str)
+        # print(self.regrets)
         if state_str in self.regrets:
             print('encountered')
             print(self.regrets[state_str])
         else:
+            print(state_str)
             print('havent encountered')
         print(f"cfr_agent chose: {action}")
         return action
@@ -285,10 +288,10 @@ class CFRAgent():
         raw_obs = state['raw_obs']
         equity = calculate_equity(raw_obs['hand'], raw_obs['public_cards'])
         new_obs = { 
-            'pot': raw_obs['pot'] - raw_obs['pot'] % 10,
-            'my_chips': raw_obs['my_chips'] - raw_obs['my_chips'] % 10,
+            'pot': raw_obs['pot'] - raw_obs['pot'] % 5,
+            'my_chips': raw_obs['my_chips'] - raw_obs['my_chips'] % 5,
             'equity': round(equity * 20)/20,
-            'stage': raw_obs['stage'],
+            'stage': raw_obs['stage'].value,
         }    
 
         tuple_obs = tuple(new_obs.values())
@@ -353,9 +356,24 @@ def main():
         
         # Initialize agents
         cfr = CFRAgent(env.unwrapped.env) 
-        cfr.load('./cfr_models/cfr_model_20240404_171341')
-        print(len(cfr.regrets))
-        agents = [HumanAgent(env.action_space(env.agents[0]).n), CFRAgent(env.unwrapped.env)]
+        cfr.load('./cfr_models/cfr_model_20240405_204923')
+
+        first_three_values = {}
+#        for key in cfr.regrets.keys():
+#            # Ensure the key is a tuple and has at least 4 values
+#            if isinstance(key, tuple) and len(key) >= 4:
+#                # Use the first three values of the tuple as a new key in the dictionary
+#                first_three_key = key[:3]
+#                if first_three_key not in first_three_values:
+#                    first_three_values[first_three_key] = [key]
+#                else:
+#                    first_three_values[first_three_key].append(key)
+#
+#        duplicates = {k: v for k, v in first_three_values.items() if len(v) > 1} 
+#        print(duplicates)
+#        print(len(cfr.regrets))
+#        print(cfr.regrets.keys())
+        agents = [HumanAgent(env.action_space(env.agents[0]).n), cfr]
         agent_dict = dict(zip(env.agents, agents))
     
         # Main game loop
