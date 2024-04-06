@@ -33,6 +33,7 @@ class CFRAgent():
 
         # Regret is a dict state_str -> action regrets
         self.regrets = collections.defaultdict(np.array)
+        self.lr = .1 # determines how much weight is put on new regrets
 
         self.iteration = 0
 
@@ -135,7 +136,8 @@ class CFRAgent():
             action_prob = action_probs[action]
             regret = (action_utilities[action][current_player]
                     - player_state_utility)
-            self.regrets[obs][action] += regret
+            old_regret = self.regrets[obs][action]
+            self.regrets[obs][action] = (regret * self.lr) + (old_regret * (1 - self.lr))
             self.average_policy[obs][action] += self.iteration * action_prob
             
 #        print(obs)
