@@ -33,6 +33,7 @@ class CFRAgent():
 
         # Regret is a dict state_str -> action regrets
         self.regrets = collections.defaultdict(np.array)
+        self.lr = .1 # determines how much weight is put on new regrets
 
         self.iteration = 0
 
@@ -135,7 +136,8 @@ class CFRAgent():
             action_prob = action_probs[action]
             regret = (action_utilities[action][current_player]
                     - player_state_utility)
-            self.regrets[obs][action] += regret
+            old_regret = self.regrets[obs][action]
+            self.regrets[obs][action] = (regret * self.lr) + (old_regret * (1 - self.lr))
             self.average_policy[obs][action] += self.iteration * action_prob
             
 #        print(obs)
@@ -248,13 +250,13 @@ class CFRAgent():
         state_str, _ = self.get_state(player_id)
         # print(state_str)
         # print(self.regrets)
-        if state_str in self.regrets:
-            print('encountered')
-            print(self.regrets[state_str])
-        else:
-            print(state_str)
-            print('havent encountered')
-        print(f"cfr_agent chose: {action}")
+#        if state_str in self.regrets:
+#            print('encountered')
+#            print(self.regrets[state_str])
+#        else:
+#            print(state_str)
+#            print('havent encountered')
+#        print(f"cfr_agent chose: {action}")
         return action
  
         
@@ -356,7 +358,7 @@ def main():
         
         # Initialize agents
         cfr = CFRAgent(env.unwrapped.env) 
-        cfr.load('./cfr_models/cfr_model_20240405_204923')
+        cfr.load('./cfr_models/cfr_model_20240405_214610')
 
         first_three_values = {}
 #        for key in cfr.regrets.keys():
