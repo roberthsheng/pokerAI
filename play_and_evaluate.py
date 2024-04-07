@@ -6,6 +6,7 @@ from cfr_nolimit_agent import CFRAgent
 from pettingzoo.classic import texas_holdem_no_limit_v6
 import matplotlib.pyplot as plt
 import numpy as np
+from random_agent import RandomAgent
 
 def plot_total_payoffs(agent1_payoffs, agent2_payoffs):
     """
@@ -81,13 +82,13 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int):
                 env.step(action)
     
             if done or truncation: 
-                print("Game Over")
                 payoffs_1.append(env.unwrapped.env.get_payoffs()[0])
                 payoffs_2.append(env.unwrapped.env.get_payoffs()[1])
                 if payoffs_1[-1] < 0:
                     won.append(1)
                 else:
                     won.append(0)
+                print(f"Game over: agent 0 won {payoffs_1[-1]}")
                 break
     
     return payoffs_1, payoffs_2, won
@@ -114,6 +115,9 @@ def get_agent(agent_name, env, player_id):
 
     elif agent_name == "equity":
         agent = EquityAgent(env)
+
+    elif agent_name == "random":
+        agent = RandomAgent(env, player_id)
 
     else:
         raise ValueError(f"Invalid argument: {agent_name} not a valid agent name")
