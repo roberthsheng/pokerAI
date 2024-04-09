@@ -7,8 +7,9 @@ from pettingzoo.classic import texas_holdem_no_limit_v6
 import matplotlib.pyplot as plt
 import numpy as np
 from random_agent import RandomAgent
+from equity_calculator import calculate_winpercent
 
-def plot_total_payoffs(agent1_payoffs, agent2_payoffs):
+def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name):
     """
     This function takes the payoffs of two agents over time and plots the cumulative total payoffs over time.
 
@@ -28,9 +29,9 @@ def plot_total_payoffs(agent1_payoffs, agent2_payoffs):
     cumulative_total_payoffs = np.cumsum(agent1_payoffs)
     # Plotting
     plt.figure(figsize=(10, 6))
-    plt.plot(time_points, agent1_payoffs, label='Agent 1 Payoffs', marker='o')
-    plt.plot(time_points, agent2_payoffs, label='Agent 2 Payoffs', marker='x')
-    plt.plot(time_points, cumulative_total_payoffs, label='Cumulative Total Payoffs Player 1', linestyle='--', marker='s')
+    plt.plot(time_points, agent1_payoffs, label=f"{agent1_name} Payoffs", marker='o')
+    plt.plot(time_points, agent2_payoffs, label=f"{agent2_name} Payoffs", marker='x')
+    plt.plot(time_points, cumulative_total_payoffs, label="Cumulative Total Payoffs {agent1_name} 1", linestyle='--', marker='s')
     
     plt.title('Stage-wise and Cumulative Total Payoffs Over Time')
     plt.xlabel('Time')
@@ -39,7 +40,20 @@ def plot_total_payoffs(agent1_payoffs, agent2_payoffs):
     plt.grid(True)
     plt.show()
 
-def play_poker_games(agent_names: List[str], number_of_games: int, render: int):
+def get_oracle_win(env):
+    """
+    Returns the win percentage of player 1 in the environment at the ending state
+
+    :param env: An env which should be in the done state
+    """
+    p1_state = env.unwrapped.env.get_state(0)
+    p2_state = env.unwrapped.env.get_state(1)
+    p1_hand = p1_state['raw_obs']['hand']
+    p2_hand = p2_state['raw_obs']['hand']
+    board = p1_state['raw_obs']['public_cards']
+    return calculate_winpercent(p1_hand, p2_hand, board)
+
+def play_poker_games(agent_names: List[str], number_of_games: int, render: int, oracle: int):
     """
     Function to simulate poker games between agents.
     
@@ -64,7 +78,8 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int):
     payoffs_1  = [] # payoffs for the first agent
     payoffs_2 = [] # payoffs for the second agent
     won = []
-        
+    oracle_wp = [] 
+    
     for i in range(number_of_games):
         env.reset()
 
@@ -72,6 +87,10 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int):
             observation, reward, done, truncation, info = env.last()
 
             if done:
+                if oracle:
+                    win_percent = get_oracle_win(env)
+                    oracle_wp.append(win_percent)
+
                 env.step(None)
             else:
                 # Fetch the corresponding agent (human or AI)
@@ -91,7 +110,7 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int):
                 print(f"Game over: agent 0 won {payoffs_1[-1]}")
                 break
     
-    return payoffs_1, payoffs_2, won
+    return payoffs_1, payoffs_2, won, oracle_wp
          
 
 def get_agent(agent_name, env, player_id):
@@ -107,7 +126,6 @@ def get_agent(agent_name, env, player_id):
     if agent_name == "cfr":
         agent = CFRAgent(env.unwrapped.env) 
         agent.load('./cfr_models/cfr_model_20240405_214610')
-        print(len(agent.regrets))
         
 
     elif agent_name == "human": 
@@ -129,14 +147,17 @@ if __name__ == "__main__":
     parser.add_argument("agent_names", nargs='+', help="Names of the agents participating in the games.")
     parser.add_argument("--number_of_games", type=int, default=100, help="Number of games to be played.")
     parser.add_argument("--render", type=int, default=True, help="whether or not to render the games being played.")
+    parser.add_argument("--oracle", type=int, default=True, help="whether or not to track oracle outcomes.")
+
 
     args = parser.parse_args()
 
-    payoffs1, payoffs2, won = play_poker_games(
+    payoffs1, payoffs2, won, oracle_results = play_poker_games(
         agent_names=args.agent_names,
         number_of_games=args.number_of_games,
-        render= args.render
+        render= args.render,
+        oracle = args.oracle
     )
 
     # Print or process the results of the games
-    plot_total_payoffs(payoffs1, payoffs2)
+    plot_total_payoffs(payoffs1, payoffs2, args.agent_names[0], args.agent_names[1])

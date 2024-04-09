@@ -68,7 +68,26 @@ def calculate_equity(hole_cards, community_cards):
     equity_map = eval7.py_all_hands_vs_range(hero, villain, board, 100000)
     return equity_map[next(iter(equity_map))]
 
-# some tests
+def calculate_winpercent(hero_cards, villain_cards, community_cards):
+    """
+    Given both players' hands and the board calculate the chance of the first player winning.
+    :param hero_cards: the player we're examining's hand. In RLCard format
+    :param villain_cards: other player's hand in RLCard format.
+    
+    return probability of hero winning.
+    """
+    pokerstove_hero = parse_into_pokerstove(hero_cards)
+    pokerstove_villain = parse_into_pokerstove(villain_cards)  
+
+    hero = eval7.HandRange("".join(pokerstove_hero))
+    villain = eval7.HandRange("".join(pokerstove_villain))
+    board = rl_cardstr_to_cards(community_cards)
+
+    equity_map = eval7.py_all_hands_vs_range(hero, villain, board, 100000)
+    return equity_map[next(iter(equity_map))]
+
+    
+    
 
 # Tests for parse_into_pokerstove
 def test_parse_into_pokerstove_basic():
@@ -97,13 +116,30 @@ def test_calculate_equity_community_cards_impact():
     win_percentage = calculate_equity(hole_cards, community_cards)
     assert win_percentage < 0.8, "Expected lower win percentage due to strong community cards."
 
+def test_high_card_vs_high_card():
+    hero_cards = ['SA', 'H3']  # Ace high
+    villain_cards = ['HK', 'H2']  # King high
+    community_cards = ['D5', 'C6', 'D7']
+    win_percent = calculate_winpercent(hero_cards, villain_cards, community_cards)
+    assert 0.65 < win_percent  # Example values, adjust based on actual evaluation
+
+def test_pair_vs_high_card():
+    hero_cards = ['SA', 'CA']  # Pair of Aces
+    villain_cards = ['HK', 'HQ']  # Ace high
+    community_cards = ['D5', 'C6', 'D7']
+    win_percent = calculate_winpercent(hero_cards, villain_cards, community_cards)
+    assert 0.85 < win_percent 
+
+
 # Running the tests
 def main():
     test_parse_into_pokerstove_basic()
     test_rl_cardstr_to_cards_integration()
     test_calculate_equity_simple_scenario()
     test_calculate_equity_community_cards_impact()
-    
+    test_high_card_vs_high_card()
+    test_pair_vs_high_card()
+
     print("All tests passed successfully!")
     
 
