@@ -26,15 +26,12 @@ class EquityAgent(object):
 
     def step(self, observation):
         state = self.get_state(observation)
-        print(state)
         if state["amount_to_play"] == 0: # check if there is no bet
             return 1
         
         hand_equity = calculate_equity(state['hole_cards'], state['community_cards'])
         pot_odds = state['amount_to_play']/(state['pot'] + state['amount_to_play']) 
         
-        print(hand_equity)
-        print(pot_odds)
         if pot_odds <= hand_equity: # call if equity > pot odds (vs all hands), this is +EV
             return 1 # meaning call
 
