@@ -2,7 +2,6 @@ import numpy as np
 from typing import Callable, Dict, List, NewType, cast
 from pettingzoo.classic import texas_holdem_v4
 import copy
-import treys # pip install
 
 from equity_agent import calculate_equity
 
@@ -20,7 +19,7 @@ class ValueAgent:
     '''Agent that randomly selects form +EV actions'''
     def __init__(self, env, agent_idx=1):
         self.env = env
-        self.agent_idx
+        self.agent_idx = agent_idx
 
     def get_state(self, observation):
         # need to get hand/community card data which seems inaccessible via vanilla observations
@@ -31,7 +30,7 @@ class ValueAgent:
         pot = raw_data['pot']
         current_bet = max(raw_data['all_chips'])
         amount_to_play = current_bet - raw_data['my_chips']
-        stack = raw_data['raw_obs']['stakes']
+        stack = raw_data['stakes']
         state = {
             'raw_obs': observation,
             'hole_cards': hole_cards,
@@ -42,12 +41,14 @@ class ValueAgent:
         }
         return state 
 
-    def choose_action(self, observation):
+    def step(self, observation):
         state = self.get_state(observation)
         print(state)
 
         mask = observation['action_mask']
         valid_actions = np.where(mask == 1)[0]
+
+        stack = state['stack'][self.agent_idx]
 
         ## remove valid actions based on whether they are +EV
         # fold
@@ -59,9 +60,11 @@ class ValueAgent:
             # call
             if state['amount_to_play'] > 0:
                 hand_equity = calculate_equity(state['hole_cards'], state['community_cards'])
-                pot_odds = state['amount_to_play'] / (state['pot'] + state['amount_to_play']) 
+                pot_odds = state['amount_to_play'] / (state['pot'] + state['amount_to_play'])
+
                 if hand_equity <= pot_odds:
-                    valid_actions.pop(0)
+                    np.delete(valid_actions, 0)
+                    return 1
         
         # raise half pot
         if mask[2] == 1:
@@ -73,9 +76,9 @@ class ValueAgent:
                 pay = state['amount_to_play'] + (state['amount_to_play'] + state['pot'])/2 # price to call + current pot halved
                 win = state['pot'] + pay
                 pot_odds = pay / win
-                
+
             if hand_equity <= pot_odds:
-                valid_actions.pop(0)
+                np.delete(valid_actions, 0)
         
         # raise pot
         if mask[3] == 1:
@@ -87,17 +90,17 @@ class ValueAgent:
                 pay = state['amount_to_play'] + (state['amount_to_play'] + state['pot']) # price to call + current pot
                 win = state['pot'] + pay
                 pot_odds = pay / win
-                
+
             if hand_equity <= pot_odds:
-                valid_actions.pop(0)
+                np.delete(valid_actions, 0)
         
         # all in
         if mask[4] == 1:
             hand_equity = calculate_equity(state['hole_cards'], state['community_cards'])
-            pot_odds = (state['stack']) / (state['pot'] + state['stack'])
+            pot_odds = stack / (state['pot'] + stack)
 
             if hand_equity <= pot_odds:
-                valid_actions.pop(0)
+                np.delete(valid_actions, 0)
         
         # randomly choose among +EV actions
         if len(valid_actions) > 0:
