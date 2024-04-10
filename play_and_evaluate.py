@@ -12,39 +12,56 @@ from shove_agent import ShoveAgent
 from lc_agent import LooseCannonAgent
 from equity_calculator import calculate_winpercent
 from qlearning_agent import QLearningAgent
+import os
 
-def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name):
+def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentages, agent1_name, agent2_name):
     """
-    This function takes the payoffs of two agents over time and plots the cumulative total payoffs over time.
+    This function plots the cumulative total payoffs over time and the oracle win percentage of agent 1.
 
     Parameters:
     - agent1_payoffs: List of payoffs for Agent 1
     - agent2_payoffs: List of payoffs for Agent 2
+    - oracle_win_percentages: List of oracle win percentages for Agent 1
+    - agent1_name: Name of Agent 1
+    - agent2_name: Name of Agent 2
     """
     if len(agent1_payoffs) != len(agent2_payoffs):
         raise ValueError("The lists of payoffs must be of the same length.")
         return
 
-      # Calculate running total payoffs
-    
-    # Generate time points
-    time_points = list(range(1, len(agent1_payoffs) + 1))
-    
-    cumulative_total_payoffs = np.cumsum(agent1_payoffs)
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.plot(time_points, agent1_payoffs, label=f"{agent1_name} Payoffs", marker='o')
-    plt.plot(time_points, agent2_payoffs, label=f"{agent2_name} Payoffs", marker='x')
-    plt.plot(time_points, cumulative_total_payoffs, label=f"Cumulative Total Payoffs for {agent1_name} against {agent2_name}", linestyle='--', marker='s')
-    
-    plt.title('Stage-wise and Cumulative Total Payoffs Over Time')
-    plt.xlabel('Time')
-    plt.ylabel('Payoffs')
+    # Calculate cumulative payoffs
+    cumulative_payoffs_1 = np.cumsum(agent1_payoffs)
+    cumulative_payoffs_2 = np.cumsum(agent2_payoffs)
+
+    # Time points for x-axis
+    time_points = np.arange(1, len(agent1_payoffs) + 1)
+
+    plt.figure(figsize=(14, 7))
+
+    # Plot for cumulative payoffs
+    plt.subplot(1, 2, 1)
+    plt.plot(time_points, cumulative_payoffs_1, label=f"Cumulative {agent1_name}", marker='o')
+    plt.plot(time_points, cumulative_payoffs_2, label=f"Cumulative {agent2_name}", marker='x')
+    plt.title('Cumulative Payoffs Over Time')
+    plt.xlabel('Game Number')
+    plt.ylabel('Cumulative Payoff')
     plt.legend()
     plt.grid(True)
+
+    # Plot for oracle win percentage
+    plt.subplot(1, 2, 2)
+    plt.plot(time_points, oracle_win_percentages, label="Oracle Win Percentage", color='green', marker='s')
+    plt.title('Oracle Win Percentage of Player 1 Over Time')
+    plt.xlabel('Game Number')
+    plt.ylabel('Win Percentage')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    # Save the figure to the 'figs' directory
+    if not os.path.exists('figs'):
+        os.makedirs('figs')
+    # plt.savefig(f'figs/{agent1_name}_vs_{agent2_name}.png')
     plt.show()
-    # save to figs folder
-    plt.savefig(f'figs/{agent1_name}{agent2_name}.png')
 
 def get_oracle_win(env):
     """
@@ -174,4 +191,11 @@ if __name__ == "__main__":
     )
 
     # Print or process the results of the games
-    plot_total_payoffs(payoffs1, payoffs2, args.agent_names[0], args.agent_names[1])
+    plot_evaluation_results(
+    agent1_payoffs=payoffs1,
+    agent2_payoffs=payoffs2,
+    oracle_win_percentages=oracle_results,
+    agent1_name=args.agent_names[0],
+    agent2_name=args.agent_names[1]
+)
+
