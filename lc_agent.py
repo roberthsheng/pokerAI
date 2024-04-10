@@ -12,7 +12,7 @@ class LooseCannonAgent:
         self.strategy_sum = np.zeros(num_actions)
         self.strategy = np.ones(num_actions) / num_actions
 
-    def choose_action(self, mask):
+    def step(self, mask):
         valid_actions = np.where(mask == 1)[0]
         if len(valid_actions) > 0:
             return np.random.choice(valid_actions)

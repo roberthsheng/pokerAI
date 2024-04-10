@@ -7,6 +7,9 @@ from pettingzoo.classic import texas_holdem_no_limit_v6
 import matplotlib.pyplot as plt
 import numpy as np
 from random_agent import RandomAgent
+from value_agent import ValueAgent
+from shove_agent import ShoveAgent
+from lc_agent import LooseCannonAgent
 from equity_calculator import calculate_winpercent
 
 def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name):
@@ -31,7 +34,7 @@ def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name)
     plt.figure(figsize=(10, 6))
     plt.plot(time_points, agent1_payoffs, label=f"{agent1_name} Payoffs", marker='o')
     plt.plot(time_points, agent2_payoffs, label=f"{agent2_name} Payoffs", marker='x')
-    plt.plot(time_points, cumulative_total_payoffs, label="Cumulative Total Payoffs {agent1_name} 1", linestyle='--', marker='s')
+    plt.plot(time_points, cumulative_total_payoffs, label=f"Cumulative Total Payoffs for {agent1_name} against {agent2_name}", linestyle='--', marker='s')
     
     plt.title('Stage-wise and Cumulative Total Payoffs Over Time')
     plt.xlabel('Time')
@@ -136,6 +139,12 @@ def get_agent(agent_name, env, player_id):
 
     elif agent_name == "random":
         agent = RandomAgent(env, player_id)
+    
+    elif agent_name == "value":
+        agent = ValueAgent(env, player_id)
+    
+    elif agent_name == "shove":
+        agent = ShoveAgent(env)
 
     else:
         raise ValueError(f"Invalid argument: {agent_name} not a valid agent name")
