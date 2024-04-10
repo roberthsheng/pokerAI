@@ -11,6 +11,7 @@ from value_agent import ValueAgent
 from shove_agent import ShoveAgent
 from lc_agent import LooseCannonAgent
 from equity_calculator import calculate_winpercent
+from qlearning_agent import QLearningAgent
 
 def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name):
     """
@@ -145,6 +146,9 @@ def get_agent(agent_name, env, player_id):
     
     elif agent_name == "shove":
         agent = ShoveAgent(env)
+
+    elif agent_name == "qlearning":
+        agent = QLearningAgent(env.unwrapped.env)
 
     else:
         raise ValueError(f"Invalid argument: {agent_name} not a valid agent name")
