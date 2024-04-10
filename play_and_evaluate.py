@@ -43,6 +43,8 @@ def plot_total_payoffs(agent1_payoffs, agent2_payoffs, agent1_name, agent2_name)
     plt.legend()
     plt.grid(True)
     plt.show()
+    # save to figs folder
+    plt.savefig(f'figs/{agent1_name}{agent2_name}.png')
 
 def get_oracle_win(env):
     """
@@ -148,8 +150,7 @@ def get_agent(agent_name, env, player_id):
         agent = ShoveAgent(env)
 
     elif agent_name == "qlearning":
-        agent = QLearningAgent(env.unwrapped.env)
-
+        agent = QLearningAgent(env = env.unwrapped.env, model_path='./qlearning_models') # need to first run ```python test_rlcard_qlearning_agent.py````
     else:
         raise ValueError(f"Invalid argument: {agent_name} not a valid agent name")
 
