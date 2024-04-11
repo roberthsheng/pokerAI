@@ -14,7 +14,7 @@ from equity_calculator import calculate_winpercent
 from qlearning_agent import QLearningAgent
 import os
 
-def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentages, agent1_name, agent2_name):
+def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentages, agent1_name, agent2_name, pot_sizes):
     """
     This function plots the cumulative total payoffs over time and the oracle win percentage of agent 1.
 
@@ -36,10 +36,10 @@ def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentag
     # Time points for x-axis
     time_points = np.arange(1, len(agent1_payoffs) + 1)
 
-    plt.figure(figsize=(14, 7))
+    plt.figure(figsize=(14, 10))
 
     # Plot for cumulative payoffs
-    plt.subplot(1, 2, 1)
+    plt.subplot(2, 2, 1)
     plt.plot(time_points, cumulative_payoffs_1, label=f"Cumulative {agent1_name}", marker='o')
     plt.plot(time_points, cumulative_payoffs_2, label=f"Cumulative {agent2_name}", marker='x')
     plt.title('Cumulative Payoffs Over Time')
@@ -49,13 +49,25 @@ def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentag
     plt.grid(True)
 
     # Plot for oracle win percentage
-    plt.subplot(1, 2, 2)
+    plt.subplot(2, 2, 2)
     plt.plot(time_points, oracle_win_percentages, label="Oracle Win Percentage", color='green', marker='s')
     plt.title('Oracle Win Percentage of Player 1 Over Time')
     plt.xlabel('Game Number')
     plt.ylabel('Win Percentage')
     plt.legend()
     plt.grid(True)
+
+    plt.subplot(2, 2, 3)
+    agent1_avg_pot_size = [sum(pot_sizes[:i+1]) / (i+1) if payoff > 0 else 0 for i, payoff in enumerate(agent1_payoffs)]
+    agent2_avg_pot_size = [sum(pot_sizes[:i+1]) / (i+1) if payoff > 0 else 0 for i, payoff in enumerate(agent2_payoffs)]
+    plt.plot(time_points, agent1_avg_pot_size, label=f"{agent1_name} Average Pot Size Won", marker='o')
+    plt.plot(time_points, agent2_avg_pot_size, label=f"{agent2_name} Average Pot Size Won", marker='x')
+    plt.title('Average Pot Size Won Over Time')
+    plt.xlabel('Game Number')
+    plt.ylabel('Average Pot Size')
+    plt.legend()
+    plt.grid(True)
+
     plt.tight_layout()
     # Save the figure to the 'figs' directory
     if not os.path.exists('figs'):
@@ -100,6 +112,7 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int, 
     agent_dict = dict(zip(env.agents, agents))
     payoffs_1  = [] # payoffs for the first agent
     payoffs_2 = [] # payoffs for the second agent
+    pot_sizes = []
     won = []
     oracle_wp = [] 
     
@@ -126,6 +139,7 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int, 
             if done or truncation: 
                 payoffs_1.append(env.unwrapped.env.get_payoffs()[0])
                 payoffs_2.append(env.unwrapped.env.get_payoffs()[1])
+                pot_sizes.append(abs(payoffs_1[-1]) + abs(payoffs_2[-1]))
                 if payoffs_1[-1] < 0:
                     won.append(1)
                 else:
@@ -133,7 +147,7 @@ def play_poker_games(agent_names: List[str], number_of_games: int, render: int, 
                 print(f"Game over: agent 0 won {payoffs_1[-1]}")
                 break
     
-    return payoffs_1, payoffs_2, won, oracle_wp
+    return payoffs_1, payoffs_2, won, oracle_wp, pot_sizes
          
 
 def get_agent(agent_name, env, player_id):
@@ -183,19 +197,20 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    payoffs1, payoffs2, won, oracle_results = play_poker_games(
+    payoffs1, payoffs2, won, oracle_results, pot_sizes = play_poker_games(
         agent_names=args.agent_names,
         number_of_games=args.number_of_games,
-        render= args.render,
-        oracle = args.oracle
+        render=args.render,
+        oracle=args.oracle
     )
 
     # Print or process the results of the games
     plot_evaluation_results(
-    agent1_payoffs=payoffs1,
-    agent2_payoffs=payoffs2,
-    oracle_win_percentages=oracle_results,
-    agent1_name=args.agent_names[0],
-    agent2_name=args.agent_names[1]
-)
+        agent1_payoffs=payoffs1,
+        agent2_payoffs=payoffs2,
+        oracle_win_percentages=oracle_results,
+        agent1_name=args.agent_names[0],
+        agent2_name=args.agent_names[1],
+        pot_sizes=pot_sizes
+    )
 
