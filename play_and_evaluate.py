@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from random_agent import RandomAgent
 from value_agent import ValueAgent
+from value_variant_agent import ValueVariantAgent
 from shove_agent import ShoveAgent
 from lc_agent import LooseCannonAgent
 from equity_calculator import calculate_winpercent
@@ -89,6 +90,74 @@ def get_oracle_win(env):
     p2_hand = p2_state['raw_obs']['hand']
     board = p1_state['raw_obs']['public_cards']
     return calculate_winpercent(p1_hand, p2_hand, board)
+
+# Plotting
+def plot_cfr_win_amounts():
+    agents = ['equity', 'random', 'value', 'value2', 'shove', 'qlearning']
+    win_amounts = []
+
+    for agent in agents:
+        command = f"python play_and_evaluate.py cfr {agent} --number_of_games 100 --render 0"
+        payoffs1, _, _, _, _ = play_poker_games(agent_names=['cfr', agent], number_of_games=100, render=0, oracle=0)
+        win_amount = sum(payoffs1)
+        win_amounts.append(win_amount)
+
+    plt.figure(figsize=(12, 8))
+    
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+    
+    bars = plt.bar(agents, win_amounts, color=colors, edgecolor='black', linewidth=1)
+    plt.title('CFR Win Amounts Against Other Agents', fontsize=20, fontweight='bold')
+    plt.xlabel('Agents', fontsize=16)
+    plt.ylabel('Win Amount', fontsize=16)
+    plt.xticks(rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom', fontsize=12)
+
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    ax = plt.gca()
+    ax.set_facecolor('whitesmoke')
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_cfr_oracle_win_percentages():
+    agents = ['equity', 'random', 'value', 'value2', 'shove', 'qlearning']
+    oracle_win_percentages = []
+
+    for agent in agents:
+        command = f"python play_and_evaluate.py cfr {agent} --number_of_games 100 --render 0"
+        _, _, _, oracle_results, _ = play_poker_games(agent_names=['cfr', agent], number_of_games=100, render=0, oracle=1)
+        oracle_win_percentage = sum(oracle_results) / len(oracle_results) * 100
+        oracle_win_percentages.append(oracle_win_percentage)
+
+    plt.figure(figsize=(12, 8))
+    
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+    
+    bars = plt.bar(agents, oracle_win_percentages, color=colors, edgecolor='black', linewidth=1)
+    plt.title('CFR Oracle Win Percentages Against Other Agents', fontsize=20, fontweight='bold')
+    plt.xlabel('Agents', fontsize=16)
+    plt.ylabel('Oracle Win Percentage', fontsize=16)
+    plt.xticks(rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, height, f'{height:.2f}%', ha='center', va='bottom', fontsize=12)
+
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    ax = plt.gca()
+    ax.set_facecolor('whitesmoke')
+
+    plt.tight_layout()
+    plt.show()
+
 
 def play_poker_games(agent_names: List[str], number_of_games: int, render: int, oracle: int):
     """
@@ -178,6 +247,9 @@ def get_agent(agent_name, env, player_id):
     
     elif agent_name == "value":
         agent = ValueAgent(env, player_id)
+
+    elif agent_name == "value2":
+        agent = ValueVariantAgent(env, player_id)
     
     elif agent_name == "shove":
         agent = ShoveAgent(env)
