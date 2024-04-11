@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from random_agent import RandomAgent
 from value_agent import ValueAgent
+from value_variant_agent import ValueVariantAgent
 from shove_agent import ShoveAgent
 from lc_agent import LooseCannonAgent
 from equity_calculator import calculate_winpercent
@@ -244,6 +245,9 @@ def get_agent(agent_name, env, player_id):
     
     elif agent_name == "value":
         agent = ValueAgent(env, player_id)
+
+    elif agent_name == "value2":
+        agent = ValueVariantAgent(env, player_id)
     
     elif agent_name == "shove":
         agent = ShoveAgent(env)
