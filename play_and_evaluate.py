@@ -38,6 +38,8 @@ def plot_evaluation_results(agent1_payoffs, agent2_payoffs, oracle_win_percentag
 
     plt.figure(figsize=(14, 10))
 
+    plt.rcParams['font.family'] = 'Garamond'
+
     # Plot for cumulative payoffs
     plt.subplot(2, 2, 1)
     plt.plot(time_points, cumulative_payoffs_1, label=f"Cumulative {agent1_name}", marker='o')
