@@ -91,7 +91,7 @@ def get_oracle_win(env):
 
 # Plotting
 def plot_cfr_win_amounts():
-    agents = ['equity', 'random', 'value', 'shove', 'qlearning']
+    agents = ['equity', 'random', 'value', 'value2', 'shove', 'qlearning']
     win_amounts = []
 
     for agent in agents:
@@ -124,7 +124,7 @@ def plot_cfr_win_amounts():
     plt.show()
 
 def plot_cfr_oracle_win_percentages():
-    agents = ['equity', 'random', 'value', 'shove', 'qlearning']
+    agents = ['equity', 'random', 'value', 'value2', 'shove', 'qlearning']
     oracle_win_percentages = []
 
     for agent in agents:
